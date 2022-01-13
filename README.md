@@ -5,5 +5,4 @@ to see whether they fit the used training data in the [CosRec Repository](https:
 
 Not finished yet!
 
-Original Data for Gowalla must be downloaded from [here](https://snap.stanford.edu/data/loc-gowalla.html)
-and manually added (file too big).
+`data/` folder can be found on our Drive folder (as it's too big for Git ...) --> needs to be copied to root folder!
