@@ -11,13 +11,11 @@ def create_training_sets_from_source(name: str, source_data: pd.DataFrame, colum
         n_entries = len(source_data)
         source_data = source_data.iloc[:int(n_entries * share_entries)]
 
-    user_counter = source_data.groupby('User').count()['Time']
-    item_counter = source_data.groupby('Item').count()['Time']
-    # users_to_consider = list(user_counter[user_counter >= min_n_interactions[name]].index)
-    # items_to_consider = list(item_counter[item_counter >= min_n_interactions[name]].index)
+    entries_to_consider = source_data
+    user_counter = entries_to_consider.groupby('User').count()['Time']
+    item_counter = entries_to_consider.groupby('Item').count()['Time']
     users_to_drop = list(user_counter[user_counter < min_n_interactions[name]].index)
     items_to_drop = list(item_counter[item_counter < min_n_interactions[name]].index)
-    entries_to_consider = source_data
     while len(users_to_drop) > 0 or len(items_to_drop) > 0:
         entries_to_consider.drop(entries_to_consider[entries_to_consider.User.isin(users_to_drop)].index, inplace=True)
         entries_to_consider.drop(entries_to_consider[entries_to_consider.Item.isin(items_to_drop)].index, inplace=True)
@@ -26,10 +24,7 @@ def create_training_sets_from_source(name: str, source_data: pd.DataFrame, colum
         users_to_drop = list(user_counter[user_counter < min_n_interactions[name]].index)
         items_to_drop = list(item_counter[item_counter < min_n_interactions[name]].index)
 
-    # entries_to_consider = source_data[source_data.User.isin(users_to_consider)]
-    # entries_to_consider = entries_to_consider[entries_to_consider.Item.isin(items_to_consider)]
     entries_to_consider.sort_values(['User', 'Time'], inplace=True)
-
     users_to_consider = list(set(entries_to_consider.User))
     n_user = len(users_to_consider)
     n_items = len(set(entries_to_consider.Item))
@@ -76,7 +71,6 @@ paper_test_ml = pd.read_csv('data/ml/test.txt', delimiter=' ', header=None)
 # INFO: os stands for original source
 
 min_n_interactions = {'gowalla': 15, 'ml1m': 5}
-train_share = 0.8
 
 if ml1m:
     ml_train, ml_test, ml_stats = create_training_sets_from_source('ml1m', os_ml1m, ml1m_columns)
@@ -84,7 +78,5 @@ if gowalla:
     g_train, g_test, g_stats = create_training_sets_from_source('gowalla', os_gowalla, gowalla_columns)
     g_train_n, g_test_n, g_stats_n = create_training_sets_from_source('gowalla', os_gowalla, gowalla_columns,
                                                                       share_entries=0.318)
-
-
 
 print('Done')
