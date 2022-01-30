@@ -1,3 +1,5 @@
+import os
+import shutil
 import numpy as np
 import pandas as pd
 
@@ -26,12 +28,7 @@ def create_training_sets_from_source(name: str, source_data: pd.DataFrame, colum
 
     entries_to_consider.sort_values(['User', 'Time'], inplace=True)
     users_to_consider = list(set(entries_to_consider.User))
-    n_user = len(users_to_consider)
-    n_items = len(set(entries_to_consider.Item))
-    avg_act_user = np.mean(entries_to_consider.groupby('User').count().Item)
-    avg_act_item = np.mean(entries_to_consider.groupby('Item').count().User)
-    n_actions = len(entries_to_consider)
-    stats = [n_user, n_items, avg_act_user, avg_act_item, n_actions]
+    stats = get_statistics_from_dataset(entries_to_consider)
 
     entries_to_consider = entries_to_consider[['User', 'Item']]
     entries_to_consider['IsRated'] = [1] * len(entries_to_consider)
@@ -49,19 +46,49 @@ def create_training_sets_from_source(name: str, source_data: pd.DataFrame, colum
     train_data = entries_to_consider.loc[train_indices]
     test_data = entries_to_consider.loc[test_indices]
     if share_entries is None:
-        train_data.to_csv('reproduced_data/%s/test/train.txt' % name, sep=' ', header=None, index=None)
-        test_data.to_csv('reproduced_data/%s/test/test.txt' % name, sep=' ', header=None, index=None)
+        train_data.to_csv(os.path.join(reproduced_data_folder_name, name, 'test', 'train.txt'), sep=' ', header=None,
+                          index=None)
+        test_data.to_csv(os.path.join(reproduced_data_folder_name, name, 'test', 'test.txt'), sep=' ', header=None,
+                         index=None)
     else:
-        train_data.to_csv('reproduced_data/%s_small/test/train.txt' % name, sep=' ', header=None, index=None)
-        test_data.to_csv('reproduced_data/%s_small/test/test.txt' % name, sep=' ', header=None, index=None)
+        train_data.to_csv(os.path.join(reproduced_data_folder_name, '%s_small' % name, 'test', 'train.txt'), sep=' ',
+                          header=None, index=None)
+        test_data.to_csv(os.path.join(reproduced_data_folder_name, '%s_small' % name, 'test', 'test.txt'), sep=' ',
+                         header=None, index=None)
+
     return train_data, test_data, stats
 
 
+def get_statistics_from_dataset(data: pd.DataFrame, print_statistics=True):
+    users_to_consider = list(set(data.User))
+    n_user = len(users_to_consider)
+    n_items = len(set(data.Item))
+    avg_act_user = np.mean(data.groupby('User').count().Item)
+    avg_act_item = np.mean(data.groupby('Item').count().User)
+    n_actions = len(data)
+    stats = [n_user, n_items, avg_act_user, avg_act_item, n_actions]
+
+    if print_statistics:
+        for sk, s in zip(stat_keys, stats):
+            print('%s: %1.2f' % (sk, s))
+
+    return stats
+
+
+# Settings
 gowalla = False
 ml1m = True
-# INFO: os stands for original source
-
 min_n_interactions = {'gowalla': 15, 'ml1m': 5}
+stat_keys = ['n_user', 'n_items', 'avg_act_user', 'avg_act_item', 'n_actions']
+reproduced_data_folder_name = 'reproduced_data'
+
+# Create Result folder structure
+if os.path.exists(reproduced_data_folder_name):
+    shutil.rmtree(reproduced_data_folder_name)
+    os.mkdir(reproduced_data_folder_name)
+    for folder_name in ['gowalla', 'gowalla_small', 'ml1m']:
+        os.mkdir(os.path.join(reproduced_data_folder_name, folder_name))
+        os.mkdir(os.path.join(reproduced_data_folder_name, folder_name, 'test'))
 
 if ml1m:
     os_ml1m = pd.read_csv('data/ml/ratings.dat', delimiter='::', header=None)
@@ -69,18 +96,24 @@ if ml1m:
     paper_train_ml = pd.read_csv('data/ml/train.txt', delimiter=' ', header=None)
     paper_test_ml = pd.read_csv('data/ml/test.txt', delimiter=' ', header=None)
     paper_joined_ml = pd.concat([paper_train_ml, paper_test_ml])
+    paper_joined_ml.columns = ['User', 'Item', 'IsRated']
+    print('\nStatistics for reproduced ML-1M Data:')
     ml_train, ml_test, ml_stats = create_training_sets_from_source('ml1m', os_ml1m, ml1m_columns)
-    repro_joined_ml = pd.concat([ml_train, ml_test])
-    print('Stop')
+    print('\nStatistics for Repository ML-1M Data:')
+    get_statistics_from_dataset(paper_joined_ml)
 if gowalla:
     os_gowalla = pd.read_csv('data/gowalla/original_source.txt', delimiter='\t', header=None)
     gowalla_columns = ['User', 'Time', 'Lat', 'Lon', 'Item']
     paper_train_gowalla = pd.read_csv('data/gowalla/train.txt', delimiter=' ', header=None)
     paper_test_gowalla = pd.read_csv('data/gowalla/test.txt', delimiter=' ', header=None)
     paper_joined_gowalla = pd.concat([paper_train_gowalla, paper_test_gowalla])
+    paper_joined_gowalla.columns = ['User', 'Item', 'IsRated']
+    print('\nStatistics for reproduced Gowalla Data:')
     g_train, g_test, g_stats = create_training_sets_from_source('gowalla', os_gowalla, gowalla_columns)
+    print('\nStatistics for small reproduced Gowalla Data:')
     g_train_n, g_test_n, g_stats_n = create_training_sets_from_source('gowalla', os_gowalla, gowalla_columns,
                                                                       share_entries=0.318)
-    print('Stop')
+    print('\nStatistics for Repository Gowalla Data:')
+    get_statistics_from_dataset(paper_joined_gowalla)
 
 print('Done')
