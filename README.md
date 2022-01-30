@@ -6,7 +6,7 @@ to see whether they fit the used training data in the [CosRec Repository](https:
 The script further computes and prints the statistics for the reproduced and the preprocessed data sets,
 as they were presented in the paper.
 
-## TO DO: Download data sets
+## TO DO before execution: Download data sets
 The script expects the data to be in the following structure:
 
 ```
